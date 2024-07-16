@@ -1,12 +1,14 @@
 const express = require('express')
 require('dotenv').config()
 const cors = require('cors')
+const bcrypt = require('bcrypt');
 const { MongoClient, ServerApiVersion } = require('mongodb')
 
 // vars
 const app = express()
 const port = process.env.PORT || 5000
 const uriMDB = `mongodb+srv://${process.env.UserMDB}:${process.env.PasswordMDB}@cluster0.ympa4ek.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`
+const saltRounds = 10;
 
 const client = new MongoClient(uriMDB, {
   serverApi: { version: ServerApiVersion.v1, strict: true, deprecationErrors: true,}
@@ -29,7 +31,7 @@ async function run() {
     // ## req-group: get
     app.get('/', (_, res) => res.send('Welcome to backend!'))
 
-    // register new user
+    // > register new user
     app.post('/users/register', async (req, res) => {
       const newUser = req.body
 
@@ -39,7 +41,10 @@ async function run() {
         return res.status(409).send({status:'existed', message: 'You have registered before with the email!'})
       }
       
-      // insert user with pending status to db
+      // convert user's normal pin into hashed pin
+      const pinHashed = await bcrypt.hash(newUser.pin, saltRounds)
+      newUser.pin = pinHashed
+      // insert user with pending status into db
       newUser.status = "pending"
       const result = await collUsers.insertOne(newUser)
       res.send(result)
