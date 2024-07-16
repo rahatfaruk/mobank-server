@@ -21,11 +21,32 @@ async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
+
+    // init db, collection
+    const database = client.db('pha-mobank')
+    const collUsers = database.collection('users')
     
     // ## req-group: get
     app.get('/', (_, res) => res.send('Welcome to backend!'))
 
-    // check successful connection
+    // register new user
+    app.post('/users/register', async (req, res) => {
+      const newUser = req.body
+
+      // return error if user already exist in collection
+      const existedUser = await collUsers.findOne({email: newUser.email})
+      if (existedUser) {
+        return res.status(409).send({status:'existed', message: 'You have registered before with the email!'})
+      }
+      
+      // insert user with pending status to db
+      newUser.status = "pending"
+      const result = await collUsers.insertOne(newUser)
+      res.send(result)
+    })
+
+
+    // ## check successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Connected to MongoDB!");
   } catch (err) {
