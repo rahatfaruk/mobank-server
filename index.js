@@ -50,6 +50,43 @@ async function run() {
       res.send(result)
     })
 
+    // > login user
+    app.post('/user-login', async (req, res) => {
+      const userInfo = req.body
+
+      // check if email or telephone is provided
+      const isTelephone = /[0-9]+/g.test(userInfo.emailOrTelephone)
+      const isEmail = /\S+@\S+\.\S+/g.test(userInfo.emailOrTelephone)
+
+      // build query by email or telephone
+      const query = {}
+      if (isEmail) {
+        query.email = userInfo.emailOrTelephone
+      } else if (isTelephone) {
+        query.telephone = userInfo.emailOrTelephone
+      }
+
+      // get user data; check user existence
+      const resultUser = await collUsers.findOne(query)
+      if (!resultUser) {
+        return res.status(409).send({message: 'No user found!'})
+      }
+
+      // check sender's pin with result-user's hashed pin
+      const isValidPassword = await bcrypt.compare(userInfo.pin, resultUser.pin)
+      if (!isValidPassword) {
+        return res.status(409).send({message: 'password not matched!'})
+      }
+      // check result-user's status
+      if (resultUser.status === 'pendingg') {
+        return res.status(409).send({message: 'wait for admin approval your account!'})
+      }
+
+      // remove pin from result
+      delete resultUser.pin
+      res.send(resultUser)
+    })
+
 
     // ## check successful connection
     await client.db("admin").command({ ping: 1 });
