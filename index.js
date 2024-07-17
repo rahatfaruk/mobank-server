@@ -1,6 +1,7 @@
 const express = require('express')
 require('dotenv').config()
 const cors = require('cors')
+const jwt = require('jsonwebtoken')
 const bcrypt = require('bcrypt');
 const { MongoClient, ServerApiVersion } = require('mongodb')
 
@@ -30,6 +31,15 @@ async function run() {
     
     // ## req-group: get
     app.get('/', (_, res) => res.send('Welcome to backend!'))
+
+    // > generate auth token
+    app.get('/get-auth-token', async (req, res) => {
+      const email = req.query.email
+      // generate token
+      const token = jwt.sign({email}, process.env.PrivateKeyJWT, {expiresIn: '10h'})
+
+      res.send(token)
+    })
 
     // > register new user
     app.post('/users/register', async (req, res) => {
@@ -78,7 +88,7 @@ async function run() {
         return res.status(409).send({message: 'password not matched!'})
       }
       // check result-user's status
-      if (resultUser.status === 'pendingg') {
+      if (resultUser.status === 'pending') {
         return res.status(409).send({message: 'wait for admin approval your account!'})
       }
 
